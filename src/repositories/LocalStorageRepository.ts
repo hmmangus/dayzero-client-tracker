@@ -17,14 +17,9 @@ import {
   progressLogInputSchema,
 } from '../schemas';
 import { toIsoDate } from '../lib/dates';
-import {
-  ImportValidationError,
-  NotFoundError,
-  StorageCorruptedError,
-  StorageWriteError,
-  UnsupportedSchemaVersionError,
-} from './errors';
+import { NotFoundError, StorageCorruptedError, StorageWriteError } from './errors';
 import { migrate } from './migrations';
+import { validateDataset } from './validateDataset';
 import type { DateRange, Repository, Unsubscribe } from './types';
 
 export const STORAGE_KEY = 'dayzero:data';
@@ -183,19 +178,9 @@ export class LocalStorageRepository implements Repository {
   }
 
   async importAll(raw: unknown): Promise<Dataset> {
-    let migrated: unknown;
-    try {
-      migrated = migrate(raw).data;
-    } catch (error) {
-      const message = error instanceof UnsupportedSchemaVersionError ? error.message : 'Unrecognised file format';
-      throw new ImportValidationError(message, [], error);
-    }
-    const result = datasetSchema.safeParse(migrated);
-    if (!result.success) {
-      throw new ImportValidationError('Import file failed validation', result.error.issues);
-    }
-    this.write(result.data);
-    return result.data;
+    const data = validateDataset(raw);
+    this.write(data);
+    return data;
   }
 
   async resetToDemoData(): Promise<Dataset> {

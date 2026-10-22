@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0f172a" />
     <title>Dayzero Client Tracker</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light flash in dark mode.
+      // Mirrors src/lib/settings.ts.
+      try {
+        var t = localStorage.getItem('dayzero:theme');
+        if (t === 'dark' || ((!t || t === 'system') && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
