@@ -4,7 +4,7 @@ An internal tool for **Dayzerotraining**, a small online fitness-coaching busine
 the client pipeline (lead → consult → beta → active) and tracks each client's progress
 (weight, nutrition, steps and weekly check-ins) in one place, on desktop or a phone at the gym.
 
-> **Live demo:** _add your deployed link here_ · All data in the demo is fictional.
+> **Live demo:** [dayzero-client-tracker.vercel.app](https://dayzero-client-tracker.vercel.app) · All data in the demo is fictional.
 
 ## The problem
 
