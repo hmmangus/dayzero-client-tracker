@@ -23,12 +23,21 @@ week? Is this client on track? Which marketing channel is worth my time?*
 
 ## Screenshots
 
-<!-- Add images to docs/screenshots/ and replace each line below with: ![Dashboard](docs/screenshots/dashboard.png) -->
+**Dashboard:** who needs attention this week, and which lead sources convert
 
-- _Dashboard: screenshot coming soon_
-- _Pipeline board: screenshot coming soon_
-- _Client detail with charts: screenshot coming soon_
-- _Mobile view: screenshot coming soon_
+![Dashboard showing pipeline counts, check-ins due, clients needing follow-up and conversion by lead source](docs/screenshots/dashboard.png)
+
+**Pipeline:** drag clients between stages with mouse, touch or keyboard
+
+![Kanban pipeline board with Lead, Consult, Beta, Active and Paused/Churned columns](docs/screenshots/pipeline.png)
+
+**Client detail:** quick daily logging, summary stats and trend charts (light theme)
+
+![Client page with log-today form, summary stats, weight trend with 7-day average, calories, macros and steps charts](docs/screenshots/client-detail.png)
+
+**On a phone:** bottom navigation and a log form sized for use at the gym
+
+<img src="docs/screenshots/mobile.jpg" alt="Client page on a phone with the log-today form and bottom navigation" width="300">
 
 ## Features
 
