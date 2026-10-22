@@ -80,6 +80,14 @@ describe('LocalStorageRepository', () => {
       expect(updated.createdAt).toBe(client.createdAt);
     });
 
+    it('clears optional fields when they are set to undefined', async () => {
+      const repo = createRepo();
+      const client = await repo.createClient(newClientInput({ nextCheckInDate: '2026-10-27' }));
+      const updated = await repo.updateClient(client.id, { email: undefined, nextCheckInDate: undefined });
+      expect(updated.email).toBeUndefined();
+      expect((await createRepo().getClient(client.id))?.nextCheckInDate).toBeUndefined();
+    });
+
     it('throws NotFoundError for unknown clients', async () => {
       const repo = createRepo();
       await expect(repo.updateClient('missing', { notes: 'x' })).rejects.toBeInstanceOf(NotFoundError);
