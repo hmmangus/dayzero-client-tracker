@@ -27,9 +27,31 @@ const v0ToV1: Migration = (data) => {
   };
 };
 
+/**
+ * Version 2 lets clients start check-ins from the portal. Every existing
+ * check-in was recorded by the coach, so it becomes a complete coach check-in.
+ */
+const v1ToV2: Migration = (data) => ({
+  ...data,
+  schemaVersion: 2,
+  checkIns: (Array.isArray(data.checkIns) ? data.checkIns : []).map((checkIn) =>
+    isRecord(checkIn)
+      ? {
+          wins: '',
+          struggles: '',
+          questions: '',
+          submittedBy: 'coach',
+          status: 'complete',
+          ...checkIn,
+        }
+      : checkIn,
+  ),
+});
+
 /** migrations[n] upgrades data from version n to n + 1. */
 export const migrations: Record<number, Migration> = {
   0: v0ToV1,
+  1: v1ToV2,
 };
 
 export const readSchemaVersion = (data: UnknownRecord): number => {

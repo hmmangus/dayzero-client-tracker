@@ -12,7 +12,19 @@ describe('migrate', () => {
   it('treats a missing schemaVersion as v0 and renames legacy fields', () => {
     const { data, fromVersion } = migrate({ clients: [], logs: [{ id: 'x' }] });
     expect(fromVersion).toBe(0);
-    expect(data).toEqual({ schemaVersion: 1, clients: [], progressLogs: [{ id: 'x' }], checkIns: [] });
+    expect(data).toEqual({ schemaVersion: CURRENT_SCHEMA_VERSION, clients: [], progressLogs: [{ id: 'x' }], checkIns: [] });
+  });
+
+  it('upgrades v1 check-ins to complete coach check-ins with empty client answers', () => {
+    const v1CheckIn = { id: 'c', clientId: 'x', date: '2026-10-01', adherenceRating: 4, coachNotes: 'Good week', nextActions: 'Walk more' };
+    const { data, fromVersion } = migrate({ schemaVersion: 1, clients: [], progressLogs: [], checkIns: [v1CheckIn] });
+    expect(fromVersion).toBe(1);
+    expect(data).toEqual({
+      schemaVersion: 2,
+      clients: [],
+      progressLogs: [],
+      checkIns: [{ ...v1CheckIn, wins: '', struggles: '', questions: '', submittedBy: 'coach', status: 'complete' }],
+    });
   });
 
   it('keeps an existing stageHistory when upgrading v0 clients', () => {

@@ -52,6 +52,8 @@ interface ClientSpec {
   logs?: LogProfile;
   /** Days from today until the next check-in (negative = overdue). */
   nextCheckInInDays?: number;
+  /** The latest check-in was sent from the client portal and still needs the coach's reply. */
+  awaitingReply?: boolean;
 }
 
 const SPECS: ClientSpec[] = [
@@ -68,6 +70,7 @@ const SPECS: ClientSpec[] = [
     history: [['lead', 110], ['consult', 104], ['active', 84]],
     logs: { startDaysAgo: 83, endDaysAgo: 0, startWeightLbs: 204, weeklyChangeLbs: -1.1, adherence: 0.85, missRate: 0.06 },
     nextCheckInInDays: 2,
+    awaitingReply: true,
   },
   {
     slug: 'sample-sally-squats',
@@ -81,6 +84,7 @@ const SPECS: ClientSpec[] = [
     history: [['lead', 95], ['consult', 90], ['beta', 84], ['active', 56]],
     logs: { startDaysAgo: 77, endDaysAgo: 1, startWeightLbs: 131, weeklyChangeLbs: 0.35, adherence: 0.75, missRate: 0.1 },
     nextCheckInInDays: 4,
+    awaitingReply: true,
   },
   {
     slug: 'placeholder-priya-press',
@@ -173,6 +177,32 @@ const COACH_NOTES = {
     'Calories inconsistent. Agreed to log at least weight daily.',
   ],
 } as const;
+
+interface ClientAnswers {
+  wins: string;
+  struggles: string;
+  questions: string;
+}
+
+/** What clients write when they start a check-in from the portal. */
+const CLIENT_ANSWERS: Record<'high' | 'mid' | 'low', ClientAnswers[]> = {
+  high: [
+    { wins: 'Hit my step goal 6 out of 7 days and logged every meal.', struggles: 'Sunday dinner ran over on calories.', questions: '' },
+    { wins: 'New best on squats! Felt strong all week.', struggles: 'Nothing major.', questions: 'Can we add an extra upper-body day?' },
+    { wins: 'Meal prep made weekdays easy.', struggles: 'Sleep was a bit short midweek.', questions: '' },
+  ],
+  mid: [
+    { wins: 'Weekdays were on point.', struggles: 'Weekends are still tough — two takeaway meals.', questions: 'Any tips for eating out?' },
+    { wins: 'Kept training 3x even with a busy week.', struggles: 'Steps dropped on office days.', questions: '' },
+  ],
+  low: [
+    { wins: 'Still made it to the gym twice.', struggles: 'Work stress, skipped logging most days.', questions: 'Could we simplify the plan for a couple of weeks?' },
+    { wins: 'Weighed in most mornings.', struggles: 'Late-night snacking.', questions: '' },
+  ],
+};
+
+/** Check-ins from roughly the last month came in through the client portal. */
+const PORTAL_LAUNCHED_DAYS_AGO = 28;
 
 const NEXT_ACTIONS = [
   'Add a 10-minute walk after lunch.',
@@ -284,13 +314,21 @@ function generateCheckIns(rng: Rng, clientId: string, spec: ClientSpec, now: Dat
   for (let daysAgo = lastDaysAgo; daysAgo <= profile.startDaysAgo - 7; daysAgo += 7) {
     const rating = clamp(Math.round(rng.normal(1 + profile.adherence * 4, 0.7)), 1, 5);
     const band = rating >= 4 ? 'high' : rating === 3 ? 'mid' : 'low';
+    const fromPortal = daysAgo <= PORTAL_LAUNCHED_DAYS_AGO;
+    const awaiting = Boolean(spec.awaitingReply) && daysAgo === lastDaysAgo;
+    // Rotate through the sample answers so consecutive weeks read differently.
+    const options = CLIENT_ANSWERS[band];
+    const answers = fromPortal ? options[((daysAgo - lastDaysAgo) / 7) % options.length]! : { wins: '', struggles: '', questions: '' };
     checkIns.push({
       id: `checkin-${clientId}-${daysAgo}`,
       clientId,
       date: toIsoDate(subDays(now, daysAgo)),
       adherenceRating: rating,
-      coachNotes: rng.pick(COACH_NOTES[band]),
-      nextActions: rng.pick(NEXT_ACTIONS),
+      ...answers,
+      coachNotes: awaiting ? '' : rng.pick(COACH_NOTES[band]),
+      nextActions: awaiting ? '' : rng.pick(NEXT_ACTIONS),
+      submittedBy: fromPortal ? 'client' : 'coach',
+      status: awaiting ? 'awaiting_coach' : 'complete',
     });
   }
   return checkIns.reverse();

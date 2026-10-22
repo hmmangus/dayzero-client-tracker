@@ -38,6 +38,12 @@ describe('buildSeedDataset', () => {
     }
   });
 
+  it('includes client-sent check-ins, some still waiting for the coach', () => {
+    expect(data.checkIns.some((c) => c.submittedBy === 'client' && c.wins !== '')).toBe(true);
+    expect(data.checkIns.filter((c) => c.status === 'awaiting_coach').length).toBeGreaterThanOrEqual(1);
+    for (const c of data.checkIns.filter((c) => c.status === 'awaiting_coach')) expect(c.coachNotes).toBe('');
+  });
+
   it('only contains clearly fictional contact details', () => {
     for (const client of data.clients) {
       if (client.email) expect(client.email).toMatch(/@example\.com$/);

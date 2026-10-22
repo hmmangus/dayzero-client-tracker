@@ -3,7 +3,7 @@ import { clientSchema } from './client';
 import { progressLogSchema } from './progressLog';
 import { checkInSchema } from './checkIn';
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 /**
  * Everything the app stores, in one versioned envelope. This is also the

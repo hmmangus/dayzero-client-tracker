@@ -25,8 +25,8 @@ export const targetsSchema = z.object({
   goalWeightLbs: z.number().positive(),
 });
 
-export const clientSchema = z
-  .object({
+/** Client fields without cross-field rules, so subsets can be picked from it. */
+export const clientBaseSchema = z.object({
     id: idSchema,
     name: z.string().trim().min(1, 'Name is required'),
     email: z.email().optional(),
@@ -42,11 +42,26 @@ export const clientSchema = z
     notes: z.string(),
     createdAt: isoDateTimeSchema,
     updatedAt: isoDateTimeSchema,
-  })
-  .refine((c) => c.stageHistory[c.stageHistory.length - 1]?.stage === c.stage, {
+  });
+
+export const clientSchema = clientBaseSchema.refine((c) => c.stageHistory[c.stageHistory.length - 1]?.stage === c.stage, {
     message: 'stage must match the most recent stageHistory entry',
     path: ['stage'],
   });
+
+/**
+ * What a client sees about themselves in the portal: their plan and targets,
+ * but not sales details (lead source, stage history) or the coach's private notes.
+ */
+export const portalProfileSchema = clientBaseSchema.pick({
+  id: true,
+  name: true,
+  goal: true,
+  programTier: true,
+  targets: true,
+  startDate: true,
+  nextCheckInDate: true,
+});
 
 /** Fields a caller supplies when creating a client; the repository fills in the rest. */
 export const newClientSchema = z.object({
@@ -73,5 +88,6 @@ export type Goal = z.infer<typeof goalSchema>;
 export type StageHistoryEntry = z.infer<typeof stageHistoryEntrySchema>;
 export type Targets = z.infer<typeof targetsSchema>;
 export type Client = z.infer<typeof clientSchema>;
+export type PortalProfile = z.infer<typeof portalProfileSchema>;
 export type NewClient = z.input<typeof newClientSchema>;
 export type ClientPatch = z.infer<typeof clientPatchSchema>;
