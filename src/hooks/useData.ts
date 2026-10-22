@@ -1,5 +1,5 @@
 import type { DateRange } from '../repositories';
-import { useRepositoryQuery } from './useRepositoryQuery';
+import { usePortalQuery, useRepositoryQuery } from './useRepositoryQuery';
 
 export const useClients = () => useRepositoryQuery((repo) => repo.listClients(), []);
 
@@ -12,3 +12,11 @@ export const useCheckIns = (clientId: string) => useRepositoryQuery((repo) => re
 
 /** Everything at once, for cross-client views like the dashboard. */
 export const useDataset = () => useRepositoryQuery((repo) => repo.exportAll(), []);
+
+export const usePortalStatus = (clientId: string) => useRepositoryQuery((repo) => repo.getPortalStatus(clientId), [clientId]);
+
+// --- Client portal ---
+
+export const useMyProfile = () => usePortalQuery((portal) => portal.getMyProfile(), []);
+export const useMyProgressLogs = () => usePortalQuery((portal) => portal.listMyProgressLogs(), []);
+export const useMyCheckIns = () => usePortalQuery((portal) => portal.listMyCheckIns(), []);

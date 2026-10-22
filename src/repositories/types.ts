@@ -1,11 +1,14 @@
 import type {
   CheckIn,
   CheckInInput,
+  CheckInReply,
+  ClientCheckInInput,
   Client,
   ClientPatch,
   Dataset,
   IsoDate,
   NewClient,
+  PortalProfile,
   ProgressLog,
   ProgressLogInput,
   Stage,
@@ -49,9 +52,20 @@ export interface CheckInRepository {
   /** Check-ins sorted by date descending (newest first). */
   listCheckIns(clientId: string): Promise<CheckIn[]>;
   listAllCheckIns(): Promise<CheckIn[]>;
+  /** Records a complete check-in on the client's behalf. */
   createCheckIn(input: CheckInInput): Promise<CheckIn>;
+  /** Adds the coach's reply to a client-submitted check-in and marks it complete. */
+  replyToCheckIn(id: string, reply: CheckInReply): Promise<CheckIn>;
   deleteCheckIn(id: string): Promise<void>;
 }
+
+/** Whether a client can use the portal. */
+export type PortalStatus =
+  | { kind: 'demo' }
+  | { kind: 'no-email' }
+  /** The coach added their email but they haven't signed in yet. */
+  | { kind: 'invited'; email: string }
+  | { kind: 'active'; email: string };
 
 export interface DataRepository {
   exportAll(): Promise<Dataset>;
@@ -62,7 +76,28 @@ export interface DataRepository {
 
 export type Unsubscribe = () => void;
 
+/** The coach's view of all data. */
 export interface Repository extends ClientRepository, ProgressRepository, CheckInRepository, DataRepository {
+  /** 'demo' keeps data in this browser; 'live' is the shared online database. */
+  readonly mode: 'demo' | 'live';
+  getPortalStatus(clientId: string): Promise<PortalStatus>;
   /** Called after any write, including writes from another browser tab. */
+  subscribe(listener: () => void): Unsubscribe;
+}
+
+/**
+ * A signed-in client's view: only their own profile, logs and check-ins.
+ * The client id always comes from who is signed in, never from the caller,
+ * so there is no way to ask for someone else's data.
+ */
+export interface PortalRepository {
+  /** null when the signed-in email doesn't match any client yet. */
+  getMyProfile(): Promise<PortalProfile | null>;
+  listMyProgressLogs(range?: DateRange): Promise<ProgressLog[]>;
+  /** Same merge-per-day rules as the coach's upsertProgressLog. */
+  upsertMyProgressLog(input: Omit<ProgressLogInput, 'clientId'>): Promise<ProgressLog>;
+  /** Newest first, including the coach's replies. */
+  listMyCheckIns(): Promise<CheckIn[]>;
+  submitCheckIn(input: ClientCheckInInput): Promise<CheckIn>;
   subscribe(listener: () => void): Unsubscribe;
 }

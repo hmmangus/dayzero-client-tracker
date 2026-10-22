@@ -1,4 +1,4 @@
-import { CURRENT_SCHEMA_VERSION, type Client, type Dataset, type NewClient } from '../schemas';
+import { CURRENT_SCHEMA_VERSION, type CheckIn, type Client, type Dataset, type NewClient } from '../schemas';
 
 export const FIXED_NOW = new Date('2026-10-20T12:00:00.000Z');
 
@@ -33,4 +33,19 @@ export const datasetWith = (partial: Partial<Dataset> = {}): Dataset => ({
   progressLogs: [],
   checkIns: [],
   ...partial,
+});
+
+export const makeCheckIn = (overrides: Partial<CheckIn> = {}): CheckIn => ({
+  id: 'checkin-1',
+  clientId: 'client-1',
+  date: '2026-10-13',
+  adherenceRating: 4,
+  wins: '',
+  struggles: '',
+  questions: '',
+  coachNotes: '',
+  nextActions: '',
+  submittedBy: 'coach',
+  status: 'complete',
+  ...overrides,
 });

@@ -181,6 +181,36 @@ describe('LocalStorageRepository', () => {
       expect((await repo.listCheckIns(client.id)).map((c) => c.date)).toEqual(['2026-10-13', '2026-10-06']);
     });
 
+    it('records coach check-ins as complete', async () => {
+      const repo = createRepo();
+      const client = await repo.createClient(newClientInput());
+      const checkIn = await repo.createCheckIn({ clientId: client.id, date: '2026-10-13', adherenceRating: 4, coachNotes: 'Nice', nextActions: '' });
+      expect(checkIn).toMatchObject({ submittedBy: 'coach', status: 'complete', wins: '' });
+    });
+
+    it('takes a client check-in, then completes it with the coach reply', async () => {
+      const repo = createRepo();
+      const client = await repo.createClient(newClientInput());
+      const sent = await repo.submitClientCheckIn(client.id, {
+        date: '2026-10-20',
+        adherenceRating: 3,
+        wins: 'Hit steps',
+        struggles: 'Weekend',
+        questions: 'Eating out?',
+      });
+      expect(sent).toMatchObject({ submittedBy: 'client', status: 'awaiting_coach', coachNotes: '' });
+
+      const replied = await repo.replyToCheckIn(sent.id, { coachNotes: 'Pick a protein first', nextActions: 'Plan one meal out', adherenceRating: 4 });
+      expect(replied).toMatchObject({ status: 'complete', coachNotes: 'Pick a protein first', adherenceRating: 4, wins: 'Hit steps' });
+      expect((await repo.listCheckIns(client.id))[0]).toEqual(replied);
+    });
+
+    it('requires a reply message and an existing check-in', async () => {
+      const repo = createRepo();
+      await expect(repo.replyToCheckIn('missing', { coachNotes: 'x', nextActions: '' })).rejects.toBeInstanceOf(NotFoundError);
+      await expect(repo.replyToCheckIn('missing', { coachNotes: '  ', nextActions: '' })).rejects.toThrow();
+    });
+
     it('validates adherence rating is 1–5', async () => {
       const repo = createRepo();
       const client = await repo.createClient(newClientInput());

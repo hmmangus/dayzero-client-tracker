@@ -1,6 +1,8 @@
 import {
   type CheckIn,
   type CheckInInput,
+  type CheckInReply,
+  type ClientCheckInInput,
   type Client,
   type ClientPatch,
   type Dataset,
@@ -10,6 +12,8 @@ import {
   type Stage,
   CURRENT_SCHEMA_VERSION,
   checkInInputSchema,
+  checkInReplySchema,
+  clientCheckInInputSchema,
   clientPatchSchema,
   datasetSchema,
   emptyDataset,
@@ -20,7 +24,7 @@ import { toIsoDate } from '../lib/dates';
 import { NotFoundError, StorageCorruptedError, StorageWriteError } from './errors';
 import { migrate } from './migrations';
 import { validateDataset } from './validateDataset';
-import type { DateRange, Repository, Unsubscribe } from './types';
+import type { DateRange, PortalStatus, Repository, Unsubscribe } from './types';
 
 export const STORAGE_KEY = 'dayzero:data';
 export const CORRUPT_BACKUP_PREFIX = 'dayzero:corrupt:';
@@ -39,6 +43,7 @@ export interface LocalStorageRepositoryOptions {
 }
 
 export class LocalStorageRepository implements Repository {
+  readonly mode = 'demo' as const;
   private readonly storage: Storage;
   private readonly key: string;
   private readonly now: () => Date;
@@ -159,12 +164,61 @@ export class LocalStorageRepository implements Repository {
 
   async createCheckIn(input: CheckInInput): Promise<CheckIn> {
     const parsed = checkInInputSchema.parse(input);
-    const checkIn: CheckIn = { ...parsed, id: this.generateId() };
+    const checkIn: CheckIn = {
+      ...parsed,
+      id: this.generateId(),
+      wins: '',
+      struggles: '',
+      questions: '',
+      submittedBy: 'coach',
+      status: 'complete',
+    };
     this.mutate((data) => {
       if (!data.clients.some((c) => c.id === parsed.clientId)) throw new NotFoundError('Client', parsed.clientId);
       return { ...data, checkIns: [...data.checkIns, checkIn] };
     });
     return checkIn;
+  }
+
+  async replyToCheckIn(id: string, reply: CheckInReply): Promise<CheckIn> {
+    const parsed = checkInReplySchema.parse(reply);
+    let updated: CheckIn | undefined;
+    this.mutate((data) => {
+      const existing = data.checkIns.find((c) => c.id === id);
+      if (!existing) throw new NotFoundError('Check-in', id);
+      updated = {
+        ...existing,
+        coachNotes: parsed.coachNotes,
+        nextActions: parsed.nextActions,
+        adherenceRating: parsed.adherenceRating ?? existing.adherenceRating,
+        status: 'complete',
+      };
+      return { ...data, checkIns: data.checkIns.map((c) => (c === existing ? updated! : c)) };
+    });
+    return updated!;
+  }
+
+  /** Used by the demo client portal. Production enforces the same rules in the database. */
+  async submitClientCheckIn(clientId: string, input: ClientCheckInInput): Promise<CheckIn> {
+    const parsed = clientCheckInInputSchema.parse(input);
+    const checkIn: CheckIn = {
+      ...parsed,
+      id: this.generateId(),
+      clientId,
+      coachNotes: '',
+      nextActions: '',
+      submittedBy: 'client',
+      status: 'awaiting_coach',
+    };
+    this.mutate((data) => {
+      if (!data.clients.some((c) => c.id === clientId)) throw new NotFoundError('Client', clientId);
+      return { ...data, checkIns: [...data.checkIns, checkIn] };
+    });
+    return checkIn;
+  }
+
+  async getPortalStatus(): Promise<PortalStatus> {
+    return { kind: 'demo' };
   }
 
   async deleteCheckIn(id: string): Promise<void> {
