@@ -2,26 +2,30 @@ import { useState, type FormEvent } from 'react';
 import { checkInInputSchema, type CheckIn } from '../../schemas';
 import { useRepository } from '../../repositories';
 import { addDaysIso } from '../../lib/dates';
-import { formatDay, formatDayLong } from '../../lib/format';
+import { formatDay } from '../../lib/format';
 import { issuesToFieldErrors, type FieldErrors } from '../../lib/forms';
 import { Field } from '../../components/Field';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EmptyState } from '../../components/States';
 import { useToast } from '../../components/Toast';
-import { buttonClass, cardClass, inputClass, labelClass } from '../../components/ui';
+import { buttonClass, cardClass, inputClass } from '../../components/ui';
+import { CheckInCard } from '../checkins/CheckInCard';
+import { RatingPicker } from '../checkins/RatingPicker';
+import { ReplyForm } from '../checkins/ReplyForm';
 
 export function CheckInSection({ clientId, checkIns, today }: { clientId: string; checkIns: CheckIn[]; today: string }) {
   return (
     <section aria-labelledby="checkins-heading" className="grid gap-4 lg:grid-cols-5">
       <div className={`${cardClass} p-4 lg:col-span-2`}>
-        <h2 id="checkins-heading" className="mb-3 font-semibold text-slate-900 dark:text-white">
-          New check-in
+        <h2 id="checkins-heading" className="mb-1 font-semibold text-slate-900 dark:text-white">
+          Record a check-in
         </h2>
+        <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">For check-ins done in person or by message. Clients can also send their own from the portal.</p>
         <CheckInForm clientId={clientId} today={today} />
       </div>
       <div className="lg:col-span-3">
         <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">History</h3>
-        <CheckInHistory checkIns={checkIns} />
+        <CheckInHistory checkIns={checkIns} today={today} />
       </div>
     </section>
   );
@@ -42,9 +46,7 @@ function CheckInForm({ clientId, today }: { clientId: string; today: string }) {
     event.preventDefault();
     const result = checkInInputSchema.safeParse({ clientId, date, adherenceRating: rating ?? undefined, coachNotes, nextActions });
     if (!result.success) {
-      const fieldErrors = issuesToFieldErrors(result.error.issues);
-      if (fieldErrors.adherenceRating) fieldErrors.adherenceRating = 'Choose a rating from 1 to 5.';
-      setErrors(fieldErrors);
+      setErrors(issuesToFieldErrors(result.error.issues));
       return;
     }
     setErrors({});
@@ -69,31 +71,13 @@ function CheckInForm({ clientId, today }: { clientId: string; today: string }) {
         {(a11y) => <input {...a11y} type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} className={inputClass} />}
       </Field>
 
-      <fieldset aria-describedby={errors.adherenceRating ? 'rating-error' : undefined}>
-        <legend className={labelClass}>Adherence (1 = poor, 5 = excellent)</legend>
-        <div className="flex gap-2">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <label key={value} className="flex-1">
-              <input
-                type="radio"
-                name="adherence"
-                value={value}
-                checked={rating === value}
-                onChange={() => setRating(value)}
-                className="peer sr-only"
-              />
-              <span className="flex h-10 cursor-pointer items-center justify-center rounded-lg border border-slate-300 text-sm font-medium text-slate-700 peer-checked:border-teal-600 peer-checked:bg-teal-600 peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-teal-600 dark:border-slate-700 dark:text-slate-200">
-                {value}
-              </span>
-            </label>
-          ))}
-        </div>
-        {errors.adherenceRating && (
-          <p id="rating-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
-            {errors.adherenceRating}
-          </p>
-        )}
-      </fieldset>
+      <RatingPicker
+        name="adherence"
+        legend="Adherence (1 = poor, 5 = excellent)"
+        value={rating}
+        onChange={setRating}
+        error={errors.adherenceRating}
+      />
 
       <Field label="Coach notes">
         {(a11y) => <textarea {...a11y} rows={3} value={coachNotes} onChange={(e) => setCoachNotes(e.target.value)} className={inputClass} />}
@@ -114,24 +98,24 @@ function CheckInForm({ clientId, today }: { clientId: string; today: string }) {
   );
 }
 
-function CheckInHistory({ checkIns }: { checkIns: CheckIn[] }) {
+function CheckInHistory({ checkIns, today }: { checkIns: CheckIn[]; today: string }) {
   const repository = useRepository();
   const notify = useToast();
   const [toDelete, setToDelete] = useState<CheckIn | null>(null);
 
   if (checkIns.length === 0) {
-    return <EmptyState title="No check-ins yet" description="Weekly check-ins will appear here." />;
+    return <EmptyState title="No check-ins yet" description="Check-ins your client sends, and ones you record, appear here." />;
   }
 
   return (
     <>
       <ol className="space-y-3">
         {checkIns.map((checkIn) => (
-          <li key={checkIn.id} className={`${cardClass} p-4`}>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-slate-900 dark:text-white">{formatDayLong(checkIn.date)}</p>
-              <div className="flex items-center gap-2">
-                <AdherenceDots rating={checkIn.adherenceRating} />
+          <li key={checkIn.id}>
+            <CheckInCard
+              checkIn={checkIn}
+              viewer="coach"
+              actions={
                 <button
                   type="button"
                   className="rounded px-1.5 text-xs text-slate-400 hover:text-red-600"
@@ -140,15 +124,10 @@ function CheckInHistory({ checkIns }: { checkIns: CheckIn[] }) {
                 >
                   Delete
                 </button>
-              </div>
-            </div>
-            {checkIn.coachNotes && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{checkIn.coachNotes}</p>}
-            {checkIn.nextActions && (
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                <span className="font-medium text-slate-700 dark:text-slate-200">Next: </span>
-                {checkIn.nextActions}
-              </p>
-            )}
+              }
+            >
+              {checkIn.status === 'awaiting_coach' && <ReplyForm checkIn={checkIn} today={today} />}
+            </CheckInCard>
           </li>
         ))}
       </ol>
@@ -166,18 +145,5 @@ function CheckInHistory({ checkIns }: { checkIns: CheckIn[] }) {
         }}
       />
     </>
-  );
-}
-
-function AdherenceDots({ rating }: { rating: number }) {
-  return (
-    <span className="flex items-center gap-1" aria-label={`Adherence ${rating} out of 5`} title={`Adherence ${rating}/5`}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} aria-hidden="true" className={`h-2 w-2 rounded-full ${i <= rating ? 'bg-teal-600 dark:bg-teal-400' : 'bg-slate-200 dark:bg-slate-700'}`} />
-      ))}
-      <span aria-hidden="true" className="ml-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-        {rating}/5
-      </span>
-    </span>
   );
 }

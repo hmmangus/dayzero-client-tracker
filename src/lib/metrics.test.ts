@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   averageAdherence,
   calorieHitRate,
+  checkInsAwaitingReply,
   checkInsDueThisWeek,
   clientsNeedingFollowUp,
   conversionByLeadSource,
@@ -18,7 +19,7 @@ import {
   summarizeProgress,
   weekStart,
 } from './metrics';
-import { makeClient } from '../test/fixtures';
+import { makeCheckIn, makeClient } from '../test/fixtures';
 import type { CheckIn, Client, ProgressLog, Stage, StageHistoryEntry } from '../schemas';
 
 // 2026-10-21 is a Wednesday; that week runs Mon 10-19 … Sun 10-25.
@@ -37,14 +38,8 @@ const log = (date: string, values: Partial<ProgressLog> = {}, clientId = 'c1'): 
   ...values,
 });
 
-const checkIn = (clientId: string, date: string, adherenceRating: number): CheckIn => ({
-  id: `${clientId}-${date}`,
-  clientId,
-  date,
-  adherenceRating,
-  coachNotes: '',
-  nextActions: '',
-});
+const checkIn = (clientId: string, date: string, adherenceRating: number, overrides: Partial<CheckIn> = {}): CheckIn =>
+  makeCheckIn({ id: `${clientId}-${date}`, clientId, date, adherenceRating, ...overrides });
 
 describe('isOverdue', () => {
   it('is true only for dates before today', () => {
@@ -328,5 +323,26 @@ describe('averageAdherence', () => {
 
   it('is null when no active client checked in', () => {
     expect(averageAdherence(clients, [], TODAY)).toEqual({ average: null, clientCount: 0 });
+  });
+});
+
+describe('checkInsAwaitingReply', () => {
+  const clients = [clientAt('a', ['lead', 'active']), clientAt('b', ['lead', 'active'])];
+
+  it('lists client-sent check-ins without a reply, longest waiting first', () => {
+    const checkIns = [
+      checkIn('a', '2026-10-20', 4, { submittedBy: 'client', status: 'awaiting_coach' }),
+      checkIn('b', '2026-10-17', 3, { submittedBy: 'client', status: 'awaiting_coach' }),
+      checkIn('a', '2026-10-13', 4, { submittedBy: 'client', status: 'complete' }),
+    ];
+    expect(checkInsAwaitingReply(clients, checkIns, TODAY).map((r) => [r.client.id, r.daysWaiting])).toEqual([
+      ['b', 4],
+      ['a', 1],
+    ]);
+  });
+
+  it('ignores check-ins for clients that no longer exist', () => {
+    const orphan = checkIn('gone', '2026-10-20', 4, { status: 'awaiting_coach' });
+    expect(checkInsAwaitingReply(clients, [orphan], TODAY)).toEqual([]);
   });
 });

@@ -5,6 +5,7 @@ import { LEAD_SOURCES, STAGES } from '../../schemas';
 import { useDataset, useToday } from '../../hooks';
 import {
   averageAdherence,
+  checkInsAwaitingReply,
   checkInsDueThisWeek,
   clientsNeedingFollowUp,
   conversionByLeadSource,
@@ -22,12 +23,14 @@ import { Badge } from '../../components/Badge';
 import { STAGE_TONES } from '../../components/badgeTones';
 import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { buttonClass, cardClass } from '../../components/ui';
+import { useAreaPath } from '../../components/Area';
 import { axisProps } from '../clients/charts/chartTheme';
 import { ChartTooltip } from '../clients/charts/ChartTooltip';
 
 export function DashboardPage() {
   const dataset = useDataset();
   const today = useToday();
+  const path = useAreaPath();
 
   const metrics = useMemo(() => {
     if (!dataset.data) return null;
@@ -39,6 +42,7 @@ export function DashboardPage() {
       bySource: countByLeadSource(clients),
       byStage: countByStage(clients),
       due: checkInsDueThisWeek(clients, today),
+      awaitingReply: checkInsAwaitingReply(clients, checkIns, today),
       followUps: clientsNeedingFollowUp(clients, progressLogs, today),
       adherence: averageAdherence(clients, checkIns, today),
       total: clients.length,
@@ -58,8 +62,8 @@ export function DashboardPage() {
           description="Add a client, or load the demo data from the Data page to explore the dashboard."
           action={
             <div className="flex gap-2">
-              <Link to="/clients/new" className={buttonClass('primary')}>New client</Link>
-              <Link to="/data" className={buttonClass('secondary')}>Data</Link>
+              <Link to={path('/clients/new')} className={buttonClass('primary')}>New client</Link>
+              <Link to={path('/data')} className={buttonClass('secondary')}>Data</Link>
             </div>
           }
         />
@@ -109,9 +113,20 @@ export function DashboardPage() {
       </section>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        {metrics.awaitingReply.length > 0 && (
+          <ListCard title="Check-ins awaiting your reply" subtitle="Sent by clients from the portal" empty="">
+            {metrics.awaitingReply.map(({ client, checkIn, daysWaiting }) => (
+              <ListRow key={checkIn.id} to={path(`/clients/${client.id}`)} name={client.name}>
+                <span className="font-medium text-amber-700 dark:text-amber-400">
+                  {daysWaiting === 0 ? 'Sent today' : `Waiting ${daysWaiting} day${daysWaiting === 1 ? '' : 's'}`}
+                </span>
+              </ListRow>
+            ))}
+          </ListCard>
+        )}
         <ListCard title="Check-ins due this week" empty="Nothing due this week.">
           {metrics.due.map(({ client, date, overdue }) => (
-            <ListRow key={client.id} to={`/clients/${client.id}`} name={client.name}>
+            <ListRow key={client.id} to={path(`/clients/${client.id}`)} name={client.name}>
               <span className={overdue ? 'font-semibold text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}>
                 {overdue ? `Overdue · ${formatDay(date)}` : formatDay(date)}
               </span>
@@ -121,7 +136,7 @@ export function DashboardPage() {
 
         <ListCard title="Needs follow-up" subtitle="No progress log in the last 3 days" empty="Everyone has logged recently.">
           {metrics.followUps.map(({ client, lastLogDate, daysSinceLog }) => (
-            <ListRow key={client.id} to={`/clients/${client.id}`} name={client.name}>
+            <ListRow key={client.id} to={path(`/clients/${client.id}`)} name={client.name}>
               <span className="text-amber-700 dark:text-amber-400">
                 {lastLogDate ? `Last log ${daysSinceLog} days ago` : 'Never logged'}
               </span>

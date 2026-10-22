@@ -5,13 +5,15 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/States';
 import { Icon } from '../../components/Icon';
 import { buttonClass } from '../../components/ui';
 import { PipelineBoard } from './PipelineBoard';
+import { useAreaPath } from '../../components/Area';
 
 export function PipelinePage() {
   const clients = useClients();
   const today = useToday();
+  const path = useAreaPath();
 
   const newClient = (
-    <Link to="/clients/new" className={buttonClass('primary')}>
+    <Link to={path('/clients/new')} className={buttonClass('primary')}>
       <Icon name="plus" className="h-4 w-4" />
       New client
     </Link>

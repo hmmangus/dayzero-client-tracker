@@ -25,6 +25,8 @@ export function DataManagementPage() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [importError, setImportError] = useState<{ message: string; details: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Import, reset and clear replace everything, so they stay in the demo.
+  const isLive = repository.mode === 'live';
 
   const exportData = async () => {
     const data = await repository.exportAll();
@@ -76,48 +78,56 @@ export function DataManagementPage() {
 
   return (
     <>
-      <PageHeader
-        title="Data"
-        description="Your data is saved in this browser only. Export a backup regularly, especially before clearing site data or switching devices."
-      />
+          <PageHeader
+            title="Data"
+            description={
+              isLive
+                ? 'Your data is stored securely online. Each client can see only their own logs and check-ins. Download a backup now and then for your own copy.'
+                : 'Demo data is saved in this browser only. Export a backup regularly, especially before clearing site data or switching devices.'
+            }
+          />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <ActionCard title="Export backup" description={current.data ? `Download ${describe(current.data)} as a JSON file.` : 'Download everything as a JSON file.'}>
-          <button type="button" className={buttonClass('primary')} onClick={exportData}>
-            Download backup
-          </button>
-        </ActionCard>
+          <div className="grid gap-4 md:grid-cols-2">
+            <ActionCard title="Export backup" description={current.data ? `Download ${describe(current.data)} as a JSON file.` : 'Download everything as a JSON file.'}>
+              <button type="button" className={buttonClass('primary')} onClick={exportData}>
+                Download backup
+              </button>
+            </ActionCard>
 
-        <ActionCard title="Import backup" description="Replace all current data with a Dayzero JSON backup. The file is checked before anything changes.">
-          <input ref={fileInput} type="file" accept="application/json,.json" className="sr-only" onChange={onFileChosen} aria-label="Choose backup file" />
-          <button type="button" className={buttonClass('secondary')} onClick={() => fileInput.current?.click()}>
-            Choose file…
-          </button>
-          {importError && (
-            <div role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-              <p className="font-medium">{importError.message}. Nothing was changed.</p>
-              {importError.details.length > 0 && (
-                <ul className="mt-1 list-disc pl-5 text-xs">
-                  {importError.details.map((d) => (
-                    <li key={d}>{d}</li>
-                  ))}
-                </ul>
+            {!isLive && (
+              <>
+            <ActionCard title="Import backup" description="Replace all current data with a Dayzero JSON backup. The file is checked before anything changes.">
+              <input ref={fileInput} type="file" accept="application/json,.json" className="sr-only" onChange={onFileChosen} aria-label="Choose backup file" />
+              <button type="button" className={buttonClass('secondary')} onClick={() => fileInput.current?.click()}>
+                Choose file…
+              </button>
+              {importError && (
+                <div role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                  <p className="font-medium">{importError.message}. Nothing was changed.</p>
+                  {importError.details.length > 0 && (
+                    <ul className="mt-1 list-disc pl-5 text-xs">
+                      {importError.details.map((d) => (
+                        <li key={d}>{d}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-        </ActionCard>
+            </ActionCard>
 
-        <ActionCard title="Reset to demo data" description="Replace everything with the fictional demo clients. Useful for showing the app to someone.">
-          <button type="button" className={buttonClass('secondary')} onClick={() => setPending({ kind: 'demo' })}>
-            Load demo data
-          </button>
-        </ActionCard>
+            <ActionCard title="Reset to demo data" description="Replace everything with the fictional demo clients. Useful for showing the app to someone.">
+              <button type="button" className={buttonClass('secondary')} onClick={() => setPending({ kind: 'demo' })}>
+                Load demo data
+              </button>
+            </ActionCard>
 
-        <ActionCard title="Start fresh" description="Delete all clients, logs and check-ins to start using the app with real clients.">
-          <button type="button" className={buttonClass('danger')} onClick={() => setPending({ kind: 'clear' })}>
-            Delete all data
-          </button>
-        </ActionCard>
+            <ActionCard title="Start fresh" description="Delete all clients, logs and check-ins to start using the app with real clients.">
+              <button type="button" className={buttonClass('danger')} onClick={() => setPending({ kind: 'clear' })}>
+                Delete all data
+              </button>
+            </ActionCard>
+          </>
+        )}
       </div>
 
       <ConfirmDialog

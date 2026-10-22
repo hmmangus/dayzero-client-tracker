@@ -6,6 +6,7 @@ import { Icon } from '../../components/Icon';
 import { LEAD_SOURCE_LABELS, TIER_LABELS } from '../../lib/labels';
 import { formatDay } from '../../lib/format';
 import { isOverdue } from '../../lib/metrics';
+import { useAreaPath } from '../../components/Area';
 
 interface ClientCardProps {
   client: Client;
@@ -45,6 +46,7 @@ export function ClientCard({ client, columnId, today, onToggleInactive }: Client
 
 /** Card contents, shared with the drag overlay. */
 export function ClientCardBody({ client, today, onToggleInactive }: Omit<ClientCardProps, 'columnId'>) {
+  const path = useAreaPath();
   const overdue = client.nextCheckInDate !== undefined && isOverdue(client.nextCheckInDate, today);
   const inactive = client.stage === 'paused' || client.stage === 'churned';
 
@@ -52,7 +54,7 @@ export function ClientCardBody({ client, today, onToggleInactive }: Omit<ClientC
     <div className="min-w-0 flex-1 p-3">
       {/* Names wrap (up to two lines) rather than truncate, so narrow columns stay readable. */}
       <Link
-        to={`/clients/${client.id}`}
+        to={path(`/clients/${client.id}`)}
         className="line-clamp-2 break-words font-medium leading-snug text-slate-900 hover:text-teal-700 hover:underline dark:text-white dark:hover:text-teal-400"
       >
         {client.name}

@@ -254,3 +254,18 @@ export function averageAdherence(clients: Client[], checkIns: CheckIn[], today: 
     .filter((avg): avg is number => avg !== null);
   return { average: mean(perClient), clientCount: perClient.length };
 }
+
+export interface AwaitingReply {
+  client: Client;
+  checkIn: CheckIn;
+  daysWaiting: number;
+}
+
+/** Client-sent check-ins that still need the coach's reply, longest-waiting first. */
+export function checkInsAwaitingReply(clients: Client[], checkIns: CheckIn[], today: IsoDate): AwaitingReply[] {
+  const byId = new Map(clients.map((c) => [c.id, c]));
+  return checkIns
+    .filter((ci) => ci.status === 'awaiting_coach' && byId.has(ci.clientId))
+    .map((checkIn) => ({ client: byId.get(checkIn.clientId)!, checkIn, daysWaiting: Math.max(0, daysBetween(checkIn.date, today)) }))
+    .sort((a, b) => a.checkIn.date.localeCompare(b.checkIn.date));
+}

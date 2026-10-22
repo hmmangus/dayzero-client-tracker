@@ -1,43 +1,51 @@
-import { lazy, Suspense, type ReactNode } from 'react';
-import { Link, Route, Routes } from 'react-router-dom';
-import { Layout } from './components/Layout';
-import { EmptyState, LoadingState } from './components/States';
+import { lazy } from 'react';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { EmptyState } from './components/States';
 import { buttonClass } from './components/ui';
+import { isLiveConfigured } from './lib/config';
+import { page } from './areas/page';
+import { NotConfigured } from './areas/NotConfigured';
 
-// Each page is its own chunk, so the charting library only loads on pages that use it.
-const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })));
-const PipelinePage = lazy(() => import('./features/pipeline/PipelinePage').then((m) => ({ default: m.PipelinePage })));
-const ClientListPage = lazy(() => import('./features/clients/ClientListPage').then((m) => ({ default: m.ClientListPage })));
-const NewClientPage = lazy(() => import('./features/clients/NewClientPage').then((m) => ({ default: m.NewClientPage })));
-const ClientDetailPage = lazy(() => import('./features/clients/ClientDetailPage').then((m) => ({ default: m.ClientDetailPage })));
-const DataManagementPage = lazy(() => import('./features/settings/DataManagementPage').then((m) => ({ default: m.DataManagementPage })));
+const LandingPage = lazy(() => import('./features/landing/LandingPage').then((m) => ({ default: m.LandingPage })));
+const DemoArea = lazy(() => import('./areas/DemoArea').then((m) => ({ default: m.DemoArea })));
+const LiveAreas = lazy(() => import('./areas/LiveAreas').then((m) => ({ default: m.LiveAreas })));
 
-const page = (element: ReactNode) => <Suspense fallback={<LoadingState />}>{element}</Suspense>;
+const live = (area: 'coach' | 'me' | 'auth') => (isLiveConfigured ? page(<LiveAreas area={area} />) : <NotConfigured />);
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route element={<Layout />}>
-        <Route index element={page(<DashboardPage />)} />
-        <Route path="pipeline" element={page(<PipelinePage />)} />
-        <Route path="clients" element={page(<ClientListPage />)} />
-        <Route path="clients/new" element={page(<NewClientPage />)} />
-        <Route path="clients/:clientId" element={page(<ClientDetailPage />)} />
-        <Route path="data" element={page(<DataManagementPage />)} />
-        <Route
-          path="*"
-          element={
-            <EmptyState
-              title="Page not found"
-              action={
-                <Link to="/" className={buttonClass('secondary')}>
-                  Go to dashboard
-                </Link>
-              }
-            />
-          }
-        />
-      </Route>
+      <Route index element={page(<LandingPage />)} />
+      <Route path="demo/*" element={page(<DemoArea />)} />
+      <Route path="coach/*" element={live('coach')} />
+      <Route path="me/*" element={live('me')} />
+      <Route path="auth/*" element={live('auth')} />
+      {/* Links from before the demo moved to /demo keep working. */}
+      <Route path="pipeline" element={<LegacyRedirect />} />
+      <Route path="clients/*" element={<LegacyRedirect />} />
+      <Route path="data" element={<LegacyRedirect />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
+  );
+}
+
+function LegacyRedirect() {
+  const { pathname, search } = useLocation();
+  return <Navigate to={`/demo${pathname}${search}`} replace />;
+}
+
+function NotFound() {
+  return (
+    <div className="min-h-screen bg-slate-50 px-4 py-16 dark:bg-slate-950">
+      <EmptyState
+        as="h1"
+        title="Page not found"
+        action={
+          <Link to="/" className={buttonClass('secondary')}>
+            Go to the home page
+          </Link>
+        }
+      />
+    </div>
   );
 }

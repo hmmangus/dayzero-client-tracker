@@ -11,10 +11,21 @@ export function LoadingState({ label = 'Loading…' }: { label?: string }) {
   );
 }
 
-export function EmptyState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+export function EmptyState({
+  title,
+  description,
+  action,
+  as: Title = 'p',
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  /** Use 'h1' when the empty state is the whole page. */
+  as?: 'p' | 'h1' | 'h2';
+}) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700">
-      <p className="font-medium text-slate-800 dark:text-slate-200">{title}</p>
+      <Title className="font-medium text-slate-800 dark:text-slate-200">{title}</Title>
       {description && <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>

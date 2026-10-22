@@ -21,12 +21,15 @@ import { buildProgressSeries } from './progressSeries';
 import { WeightChart } from './charts/WeightChart';
 import { TargetBarChart } from './charts/TargetBarChart';
 import { MacroChart } from './charts/MacroChart';
+import { PortalAccessCard } from './PortalAccessCard';
+import { useAreaPath } from '../../components/Area';
 
 export function ClientDetailPage() {
   const { clientId = '' } = useParams();
   const client = useClient(clientId);
   const logs = useProgressLogs(clientId);
   const checkIns = useCheckIns(clientId);
+  const path = useAreaPath();
 
   const failed = [client, logs, checkIns].find((q) => q.status === 'error');
   if (failed?.error) return <ErrorState error={failed.error} onRetry={failed.refresh} />;
@@ -36,10 +39,11 @@ export function ClientDetailPage() {
   if (!client.data) {
     return (
       <EmptyState
+        as="h1"
         title="Client not found"
         description="They may have been deleted."
         action={
-          <Link to="/clients" className={buttonClass('secondary')}>
+          <Link to={path('/clients')} className={buttonClass('secondary')}>
             Back to clients
           </Link>
         }
@@ -52,6 +56,7 @@ export function ClientDetailPage() {
 function ClientDetail({ client, logs, checkIns }: { client: Client; logs: ProgressLog[]; checkIns: CheckIn[] }) {
   const repository = useRepository();
   const navigate = useNavigate();
+  const path = useAreaPath();
   const notify = useToast();
   const today = useToday();
   const [range, setRange] = useState<DateRangeOption>('4w');
@@ -65,7 +70,7 @@ function ClientDetail({ client, logs, checkIns }: { client: Client; logs: Progre
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/clients" className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+        <Link to={path('/clients')} className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
           <Icon name="chevronLeft" className="h-4 w-4" />
           Clients
         </Link>
@@ -113,7 +118,7 @@ function ClientDetail({ client, logs, checkIns }: { client: Client; logs: Progre
         </div>
       </div>
 
-      <LogDayForm clientId={client.id} logs={logs} today={today} />
+      <LogDayForm logs={logs} today={today} onSave={(input) => repository.upsertProgressLog({ ...input, clientId: client.id })} />
 
       <section aria-labelledby="progress-heading" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -166,6 +171,8 @@ function ClientDetail({ client, logs, checkIns }: { client: Client; logs: Progre
         <LogHistoryTable logs={series.inRange} />
       </section>
 
+      <PortalAccessCard client={client} />
+
       <section aria-label="Check-ins" className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Check-ins</h2>
         <CheckInSection clientId={client.id} checkIns={checkIns} today={today} />
@@ -216,7 +223,7 @@ function ClientDetail({ client, logs, checkIns }: { client: Client; logs: Progre
         onConfirm={async () => {
           await repository.deleteClient(client.id);
           notify(`${client.name} deleted`);
-          navigate('/clients');
+          navigate(path('/clients'));
         }}
       >
         This also deletes all of their progress logs and check-ins. It can't be undone unless you have an export.

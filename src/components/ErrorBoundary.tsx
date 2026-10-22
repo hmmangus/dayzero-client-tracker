@@ -8,7 +8,11 @@ interface State {
 }
 
 /** Catches render errors. Corrupted storage gets a recovery screen instead of a blank page. */
-export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
+/**
+ * `recoverStorage` shows the corrupted-data recovery screen; it needs a repository
+ * above it, so only the demo area (which uses browser storage) turns it on.
+ */
+export class ErrorBoundary extends Component<{ children: ReactNode; recoverStorage?: boolean }, State> {
   override state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
@@ -24,7 +28,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   override render() {
     const { error } = this.state;
     if (!error) return this.props.children;
-    if (error instanceof StorageCorruptedError) return <CorruptDataScreen error={error} onRecovered={this.reset} />;
+    if (error instanceof StorageCorruptedError && this.props.recoverStorage) return <CorruptDataScreen error={error} onRecovered={this.reset} />;
 
     return (
       <div role="alert" className="mx-auto max-w-lg px-4 py-16 text-center">

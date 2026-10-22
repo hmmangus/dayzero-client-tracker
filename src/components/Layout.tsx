@@ -1,15 +1,19 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useArea } from './Area';
 import { Icon, type IconName } from './Icon';
 import { ThemeToggle } from './ThemeToggle';
 
-const NAV_ITEMS: Array<{ to: string; label: string; icon: IconName; end?: boolean }> = [
-  { to: '/', label: 'Dashboard', icon: 'dashboard', end: true },
-  { to: '/pipeline', label: 'Pipeline', icon: 'board' },
-  { to: '/clients', label: 'Clients', icon: 'users' },
-  { to: '/data', label: 'Data', icon: 'database' },
+const NAV_ITEMS: Array<{ path: string; label: string; icon: IconName; end?: boolean }> = [
+  { path: '', label: 'Dashboard', icon: 'dashboard', end: true },
+  { path: '/pipeline', label: 'Pipeline', icon: 'board' },
+  { path: '/clients', label: 'Clients', icon: 'users' },
+  { path: '/data', label: 'Data', icon: 'database' },
 ];
 
 export function Layout() {
+  const area = useArea();
+  const to = (path: string) => area.base + path || '/';
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">
@@ -25,8 +29,8 @@ export function Layout() {
         <nav aria-label="Main" className="flex flex-1 flex-col gap-1">
           {NAV_ITEMS.map((item) => (
             <NavLink
-              key={item.to}
-              to={item.to}
+              key={item.path}
+              to={to(item.path)}
               end={item.end}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
@@ -41,6 +45,16 @@ export function Layout() {
             </NavLink>
           ))}
         </nav>
+        {area.kind === 'coach' && area.userEmail && (
+          <div className="mb-2 border-t border-slate-200 px-3 pt-3 text-xs dark:border-slate-800">
+            <p className="truncate text-slate-500 dark:text-slate-400" title={area.userEmail}>
+              {area.userEmail}
+            </p>
+            <button type="button" onClick={area.signOut} className="mt-1 font-medium text-slate-700 hover:underline dark:text-slate-200">
+              Sign out
+            </button>
+          </div>
+        )}
         <ThemeToggle showLabel />
       </aside>
 
@@ -50,8 +64,17 @@ export function Layout() {
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-teal-700 text-xs font-bold text-white">D0</span>
           <span className="font-semibold">Dayzero</span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          {area.kind === 'coach' && area.signOut && (
+            <button type="button" onClick={area.signOut} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+              Sign out
+            </button>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
+
+      {area.kind === 'demo' && <DemoBanner portalPreviewPath={area.portalPreviewPath} />}
 
       <main id="main" className="px-4 pb-28 pt-5 md:ml-60 md:px-8 md:pb-10 md:pt-8">
         <div className="mx-auto max-w-6xl">
@@ -66,8 +89,8 @@ export function Layout() {
       >
         {NAV_ITEMS.map((item) => (
           <NavLink
-            key={item.to}
-            to={item.to}
+            key={item.path}
+            to={to(item.path)}
             end={item.end}
             className={({ isActive }) =>
               `flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
@@ -80,6 +103,22 @@ export function Layout() {
           </NavLink>
         ))}
       </nav>
+    </div>
+  );
+}
+
+function DemoBanner({ portalPreviewPath }: { portalPreviewPath?: string }) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-violet-700 px-4 py-2 text-center text-xs text-white md:ml-60">
+      <span>Demo mode: fictional clients, saved only in this browser.</span>
+      {portalPreviewPath && (
+        <Link to={portalPreviewPath} className="font-semibold underline">
+          See the client portal
+        </Link>
+      )}
+      <Link to="/" className="font-semibold underline">
+        Home
+      </Link>
     </div>
   );
 }

@@ -1,8 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { LocalStorageRepository, RepositoryProvider } from './repositories';
-import { buildSeedDataset } from './seed/seed';
 import './index.css';
 
 // After a new deploy, a tab left open still references the previous build's page
@@ -21,12 +19,8 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload();
 });
 
-const repository = new LocalStorageRepository({ demoData: buildSeedDataset });
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RepositoryProvider repository={repository}>
-      <App />
-    </RepositoryProvider>
+    <App />
   </StrictMode>,
 );

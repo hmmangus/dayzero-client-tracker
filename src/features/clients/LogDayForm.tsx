@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import { progressLogInputSchema, type ProgressLog, type ProgressLogInput } from '../../schemas';
-import { useRepository } from '../../repositories';
 import { issuesToFieldErrors, optionalNumber, optionalString, type FieldErrors } from '../../lib/forms';
 import { formatDayLong } from '../../lib/format';
 import { Field } from '../../components/Field';
@@ -18,7 +17,16 @@ const NUMBER_FIELDS = [
 
 type NumberKey = (typeof NUMBER_FIELDS)[number]['key'];
 
-export function LogDayForm({ clientId, logs, today }: { clientId: string; logs: ProgressLog[]; today: string }) {
+/** Everything in a day's log except who it belongs to; the caller decides that. */
+export type DayLogInput = Omit<ProgressLogInput, 'clientId'>;
+
+const dayLogSchema = progressLogInputSchema.omit({ clientId: true });
+
+/**
+ * Logs one day's weight, food and steps. Used on the coach's client page and in
+ * the client portal; `onSave` decides where the log goes.
+ */
+export function LogDayForm({ logs, today, onSave }: { logs: ProgressLog[]; today: string; onSave: (input: DayLogInput) => Promise<unknown> }) {
   const [date, setDate] = useState(today);
   const existing = logs.find((log) => log.date === date);
 
@@ -39,13 +47,12 @@ export function LogDayForm({ clientId, logs, today }: { clientId: string; logs: 
         </label>
       </div>
       {/* Re-mount when the date or saved entry changes so fields show that day's values. */}
-      <LogDayFields key={`${date}:${JSON.stringify(existing ?? null)}`} clientId={clientId} date={date} existing={existing} />
+      <LogDayFields key={`${date}:${JSON.stringify(existing ?? null)}`} date={date} existing={existing} onSave={onSave} />
     </section>
   );
 }
 
-function LogDayFields({ clientId, date, existing }: { clientId: string; date: string; existing?: ProgressLog }) {
-  const repository = useRepository();
+function LogDayFields({ date, existing, onSave }: { date: string; existing?: ProgressLog; onSave: (input: DayLogInput) => Promise<unknown> }) {
   const notify = useToast();
   const [values, setValues] = useState<Record<NumberKey | 'note', string>>(() => ({
     weightLbs: existing?.weightLbs?.toString() ?? '',
@@ -61,8 +68,7 @@ function LogDayFields({ clientId, date, existing }: { clientId: string; date: st
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const input: ProgressLogInput = {
-      clientId,
+    const input: DayLogInput = {
       date,
       weightLbs: optionalNumber(values.weightLbs),
       calories: optionalNumber(values.calories),
@@ -72,19 +78,19 @@ function LogDayFields({ clientId, date, existing }: { clientId: string; date: st
       steps: optionalNumber(values.steps),
       note: optionalString(values.note),
     };
-    const result = progressLogInputSchema.safeParse(input);
+    const result = dayLogSchema.safeParse(input);
     if (!result.success) {
       setErrors(issuesToFieldErrors(result.error.issues));
       return;
     }
-    if (Object.entries(result.data).every(([key, value]) => key === 'clientId' || key === 'date' || value === undefined)) {
+    if (Object.entries(result.data).every(([key, value]) => key === 'date' || value === undefined)) {
       setErrors({ form: 'Enter at least one value.' });
       return;
     }
     setErrors({});
     setSaving(true);
     try {
-      await repository.upsertProgressLog(result.data);
+      await onSave(result.data);
       notify('Log saved');
     } catch {
       notify("Couldn't save the log", 'error');

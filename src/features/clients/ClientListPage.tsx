@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useClients, useToday } from '../../hooks';
+import { useAreaPath } from '../../components/Area';
 import { LEAD_SOURCES, PROGRAM_TIERS, STAGES, type Client } from '../../schemas';
 import { LEAD_SOURCE_LABELS, STAGE_LABELS, TIER_LABELS } from '../../lib/labels';
 import { formatDay } from '../../lib/format';
@@ -21,6 +22,7 @@ import {
 
 export function ClientListPage() {
   const clients = useClients();
+  const path = useAreaPath();
   const [filters, setFilters] = useState<ClientListFilters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'name', direction: 'asc' });
 
@@ -43,7 +45,7 @@ export function ClientListPage() {
         title="Clients"
         description={clients.data ? `${clients.data.length} total` : undefined}
         actions={
-          <Link to="/clients/new" className={buttonClass('primary')}>
+          <Link to={path('/clients/new')} className={buttonClass('primary')}>
             <Icon name="plus" className="h-4 w-4" />
             New client
           </Link>
@@ -81,7 +83,7 @@ export function ClientListPage() {
             title="No clients yet"
             description="Add your first client to get started."
             action={
-              <Link to="/clients/new" className={buttonClass('primary')}>
+              <Link to={path('/clients/new')} className={buttonClass('primary')}>
                 New client
               </Link>
             }
@@ -143,6 +145,7 @@ function ClientTable({
   onSort: (key: SortKey) => void;
 }) {
   const navigate = useNavigate();
+  const path = useAreaPath();
   const today = useToday();
 
   const header = (key: SortKey, label: string, className = '') => {
@@ -182,12 +185,12 @@ function ClientTable({
             return (
               <tr
                 key={client.id}
-                onClick={() => navigate(`/clients/${client.id}`)}
+                onClick={() => navigate(path(`/clients/${client.id}`))}
                 className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
                 <td className="px-4 py-3">
                   {/* The link makes rows reachable by keyboard; the row click is a mouse/touch convenience. */}
-                  <Link to={`/clients/${client.id}`} className="font-medium text-slate-900 hover:underline dark:text-white" onClick={(e) => e.stopPropagation()}>
+                  <Link to={path(`/clients/${client.id}`)} className="font-medium text-slate-900 hover:underline dark:text-white" onClick={(e) => e.stopPropagation()}>
                     {client.name}
                   </Link>
                   {client.email && <div className="text-xs text-slate-500 dark:text-slate-400">{client.email}</div>}
