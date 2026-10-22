@@ -50,13 +50,14 @@ export function ClientCardBody({ client, today, onToggleInactive }: Omit<ClientC
 
   return (
     <div className="min-w-0 flex-1 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <Link
-          to={`/clients/${client.id}`}
-          className="truncate font-medium text-slate-900 hover:text-teal-700 hover:underline dark:text-white dark:hover:text-teal-400"
-        >
-          {client.name}
-        </Link>
+      {/* Names wrap (up to two lines) rather than truncate, so narrow columns stay readable. */}
+      <Link
+        to={`/clients/${client.id}`}
+        className="line-clamp-2 break-words font-medium leading-snug text-slate-900 hover:text-teal-700 hover:underline dark:text-white dark:hover:text-teal-400"
+      >
+        {client.name}
+      </Link>
+      <div className="mt-2 flex flex-wrap gap-1.5">
         {inactive &&
           (onToggleInactive ? (
             <button
@@ -71,8 +72,6 @@ export function ClientCardBody({ client, today, onToggleInactive }: Omit<ClientC
           ) : (
             <StageBadge stage={client.stage} />
           ))}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1.5">
         <Badge>{LEAD_SOURCE_LABELS[client.leadSource]}</Badge>
         <Badge tone="teal">{TIER_LABELS[client.programTier]}</Badge>
       </div>
